@@ -9,7 +9,16 @@
 #include <map>
 
 using namespace std;
-
+/**
+ * @struct Proceso
+ * @brief Representa un proceso dentro del sistema operativo para la planificación.
+ *
+ * Contiene todos los datos de entrada (tiempos y colas) y las métricas de rendimiento
+ * calculadas durante y al final de la simulación.
+ *
+ * @author Jeferson Stiven Trullot Rivas
+ * @version 1.0
+ */
 struct Proceso {
     string etiqueta;
     int burst_time_original;
@@ -22,10 +31,33 @@ struct Proceso {
     int waiting_time = 0;
     int response_time = -1; 
 
+ /**
+     * @brief Constructor para inicializar un nuevo proceso.
+     *
+     * Inicializa los tiempos que necesita cada proceso en la CPU y restante con el mismo valor (bt).
+     *
+     * @param e Etiqueta del proceso.
+     * @param bt Tiempo de ejecución (Burst Time).
+     * @param at Tiempo de llegada (Arrival Time).
+     * @param q ID de la cola de planificación.
+     * @param p Prioridad del proceso.
+     */
+
     Proceso(const string& e, int bt, int at, int q, int p) 
         : etiqueta(e), burst_time_original(bt), burst_time_restante(bt), arrival_time(at), queue(q), priority(p) {}
 };
 
+/**
+ * @brief Lee los datos de los procesos desde un archivo de texto.
+ *
+ * El archivo debe contener los campos separados por punto y coma (etiqueta;bt;at;queue;priority).
+ * Implementa manejo de errores de apertura y conversión de tipos, incluyendo la limpieza
+ * de caracteres BOM y espacios en blanco.
+ *
+ * @param filename Nombre del archivo de entrada.
+ * @return vector<Proceso> Un vector de procesos cargados y listos para la ejecución.
+ * @version 1.0
+ */
 vector<Proceso> leerProcesos(const string& filename) {
     vector<Proceso> procesos;
     ifstream file(filename);
@@ -40,7 +72,7 @@ vector<Proceso> leerProcesos(const string& filename) {
     
     while (getline(file, line)) {
         line_count++;
-        
+         // Manejo y eliminación del BOM (Byte Order Mark) en archivos UTF-8
         if (line_count == 1 && line.size() >= 3 && (unsigned char)line[0] == 0xEF && (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF) {
             line = line.substr(3);
         }
@@ -78,6 +110,16 @@ vector<Proceso> leerProcesos(const string& filename) {
     return procesos;
 }
 
+/**
+ * @brief Ejecuta el Planificador Multi-Level Queue (MLQ).
+ *
+ * Implementa un esquema de prioridad fija (Q1 > Q2 > Q3) donde cada cola usa
+ * Round Robin (RR) con un quantum predefinido (Q1=1, Q2=3, Q3=2).
+ *
+ * @param procesos Vector de procesos cargados desde el archivo de entrada.
+ * @return vector<Proceso> El vector de procesos con todas las métricas calculadas.
+ * @version 1.0
+ */
 vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
     if (procesos.empty()) {
         cout << "No hay procesos para planificar." << endl;
@@ -91,9 +133,9 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
         {3, 2}
     };
 
-    vector<Proceso> procesos_simulacion = procesos;
+    vector<Proceso> procesos_ejecución = procesos;
     
-    sort(procesos_simulacion.begin(), procesos_simulacion.end(), [](const Proceso& a, const Proceso& b) {
+    sort(procesos_ejecución.begin(), procesos_ejecución.end(), [](const Proceso& a, const Proceso& b) {
         return a.arrival_time < b.arrival_time;
     });
 
@@ -106,15 +148,15 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
     int tiempo_actual = 0;
     int procesos_ingresados_idx = 0;
     int procesos_terminados = 0;
-    int total_procesos = procesos_simulacion.size();
+    int total_procesos = procesos_ejecución.size();
 
     int proceso_ejecutando_idx = -1; 
 
     while (procesos_terminados < total_procesos) {
         
-        while (procesos_ingresados_idx < total_procesos && procesos_simulacion[procesos_ingresados_idx].arrival_time <= tiempo_actual) {
+        while (procesos_ingresados_idx < total_procesos && procesos_ejecución[procesos_ingresados_idx].arrival_time <= tiempo_actual) {
             int idx = procesos_ingresados_idx;
-            ready_queues[procesos_simulacion[idx].queue].push(idx);
+            ready_queues[procesos_ejecución[idx].queue].push(idx);
             procesos_ingresados_idx++;
         }
 
@@ -133,9 +175,9 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
         } else if (proceso_ejecutando_idx == -1) {
             if (procesos_ingresados_idx < total_procesos) {
                 int tiempo_anterior = tiempo_actual;
-                tiempo_actual = procesos_simulacion[procesos_ingresados_idx].arrival_time;
+                tiempo_actual = procesos_ejecución[procesos_ingresados_idx].arrival_time;
                 if (tiempo_actual > tiempo_anterior) {
-                    cout << "[T=" << tiempo_anterior << " a " << tiempo_actual << "] IDLE (CPU Inactiva). Esperando el arribo del Proceso " << procesos_simulacion[procesos_ingresados_idx].etiqueta << "." << endl;
+                    cout << "[T=" << tiempo_anterior << " a " << tiempo_actual << "] IDLE (CPU Inactiva). Esperando el arribo del Proceso " << procesos_ejecución[procesos_ingresados_idx].etiqueta << "." << endl;
                 }
                 continue;
             } else {
@@ -148,7 +190,7 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
             proceso_ejecutando_idx = proximo_proceso_idx;
             ready_queues[proxima_cola].pop();
 
-            Proceso& p = procesos_simulacion[proceso_ejecutando_idx];
+            Proceso& p = procesos_ejecución[proceso_ejecutando_idx];
             int quantum = QUANTUM_MAP.at(proxima_cola);
             
             int tiempo_ejecutar = min(p.burst_time_restante, quantum);
@@ -166,9 +208,9 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
 
             tiempo_actual = tiempo_finalizacion_ejecucion;
 
-            while (procesos_ingresados_idx < total_procesos && procesos_simulacion[procesos_ingresados_idx].arrival_time <= tiempo_actual) {
+            while (procesos_ingresados_idx < total_procesos && procesos_ejecución[procesos_ingresados_idx].arrival_time <= tiempo_actual) {
                 int idx = procesos_ingresados_idx;
-                int cola_proceso_nuevo = procesos_simulacion[idx].queue;
+                int cola_proceso_nuevo = procesos_ejecución[idx].queue;
                 ready_queues[cola_proceso_nuevo].push(idx);
                 procesos_ingresados_idx++;
             }
@@ -191,9 +233,20 @@ vector<Proceso> ejecutarPlanificador(vector<Proceso> procesos) {
     }
     
     cout << "--- FIN DEL PLANIFICADOR MLQ (Tiempo Total de Uso: " << tiempo_actual << ") ---" << endl;
-    return procesos_simulacion;
+    return procesos_ejecución;
 }
 
+/**
+ * @brief Escribe los resultados de la ejecución y las métricas de rendimiento promedio.
+ *
+ * Genera un archivo de texto con el detalle de cada proceso y un resumen de promedios
+ * (TAT, WT, RT).
+ *
+ * @param filename Nombre del archivo de salida donde se guardarán los resultados.
+ * @param resultados Vector de procesos con todas las métricas calculadas.
+ * @return bool Retorna true si la escritura fue exitosa, false en caso de error.
+ * @version 1.0
+ */
 
 bool escribirResultados(const string& filename, const vector<Proceso>& resultados) {
     ofstream outfile(filename);
@@ -235,6 +288,17 @@ bool escribirResultados(const string& filename, const vector<Proceso>& resultado
     cout << "\nRegistros de rendimiento generados en " << filename << endl;
     return true;
 }
+
+/**
+ * @brief Función principal del programa.
+ *
+ * Realiza la carga de datos, la ejecución del planificador y la escritura de resultados.
+ *
+ * @param argc Conteo de argumentos pasados por línea de comandos.
+ * @param argv Vector de strings con los argumentos (argv[1] debe ser el archivo de entrada).
+ * @return int Código de salida (0 si es exitoso, 1 en caso de error).
+ * @version 1.0
+ */
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
