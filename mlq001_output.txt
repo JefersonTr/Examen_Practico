@@ -1,0 +1,11 @@
+Etiqueta	BT	AT	CT	TAT	WT	RT	Q	Prioridad
+A	6	0	11	11	5	0	1	5
+B	9	0	15	15	6	1	1	4
+C	10	0	34	34	24	15	2	3
+D	15	0	40	40	25	18	2	3
+E	8	0	48	48	40	40	3	2
+
+--- PROMEDIOS ---
+TAT Promedio: 29.60
+WT Promedio: 20.00
+RT Promedio: 14.80

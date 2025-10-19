@@ -1,0 +1,11 @@
+Etiqueta	BT	AT	CT	TAT	WT	RT	Q	Prioridad
+p1	30	0	30	30	0	0	1	5
+p2	12	1	51	50	38	29	2	4
+p3	18	3	60	57	39	30	2	3
+p4	25	5	95	90	65	55	3	2
+p5	10	7	80	73	63	55	3	1
+
+--- MÉTRICAS DE RENDIMIENTO ---
+TAT Promedio: 60.00
+WT Promedio: 41.00
+RT Promedio: 33.80
